@@ -1,5 +1,5 @@
-import { StationOrder, OrderItem, Station, CandyType, BASIC_CANDY_TYPES } from '@/types';
-import { STATIONS, GAME_CONFIG } from '@/data/config';
+import { StationOrder, OrderItem, Station, CandyType, BASIC_CANDY_TYPES, OriginId } from '@/types';
+import { STATIONS, GAME_CONFIG, ORIGINS } from '@/data/config';
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -23,18 +23,39 @@ export function generateOrder(stationId: string, reputation: number): StationOrd
   const difficultyLevel = getDifficultyLevel(stationId, reputation);
   const itemCount = getItemCount(difficultyLevel);
   const baseQuantity = getBaseQuantity(difficultyLevel);
+  const originConstraintChance = getOriginConstraintChance(difficultyLevel);
 
   const availableTypes = shuffle([...BASIC_CANDY_TYPES]);
   const selectedTypes = availableTypes.slice(0, itemCount);
 
-  const items: OrderItem[] = selectedTypes.map(type => ({
-    candyType: type,
-    quantity: baseQuantity + Math.floor(Math.random() * 5),
-  }));
+  const availableOrigins = Object.keys(ORIGINS) as OriginId[];
 
-  const baseReward = items.reduce((sum, item) => sum + item.quantity * 5, 0);
+  const items: OrderItem[] = selectedTypes.map(type => {
+    let requiredOrigin: OriginId | null = null;
+
+    if (Math.random() < originConstraintChance) {
+      const shuffledOrigins = shuffle([...availableOrigins]);
+      requiredOrigin = shuffledOrigins[0];
+    }
+
+    return {
+      candyType: type,
+      quantity: baseQuantity + Math.floor(Math.random() * 5),
+      requiredOrigin,
+    };
+  });
+
+  const baseReward = items.reduce((sum, item) => {
+    const base = item.quantity * 5;
+    const originBonus = item.requiredOrigin ? Math.floor(item.quantity * 3) : 0;
+    return sum + base + originBonus;
+  }, 0);
+
   const isUrgent = Math.random() < getUrgentChance(difficultyLevel);
   const urgentBonus = isUrgent ? Math.floor(baseReward * GAME_CONFIG.URGENT_BONUS_RATE) : 0;
+
+  const originConstraintCount = items.filter(i => i.requiredOrigin).length;
+  const penaltyMultiplier = 1 + originConstraintCount * 0.2;
 
   const order: StationOrder = {
     id: generateId(),
@@ -42,7 +63,7 @@ export function generateOrder(stationId: string, reputation: number): StationOrd
     stationName: station.name,
     items,
     reward: baseReward,
-    penalty: Math.floor(baseReward * GAME_CONFIG.MISMATCH_PENALTY_RATE) * itemCount,
+    penalty: Math.floor(baseReward * GAME_CONFIG.MISMATCH_PENALTY_RATE * penaltyMultiplier) * itemCount,
     isUrgent,
     urgentBonus,
   };
@@ -88,6 +109,17 @@ function getUrgentChance(difficultyLevel: number): number {
     case 3: return 0.35;
     case 4: return 0.4;
     case 5: return 0.5;
+    default: return 0.2;
+  }
+}
+
+function getOriginConstraintChance(difficultyLevel: number): number {
+  switch (difficultyLevel) {
+    case 1: return 0.1;
+    case 2: return 0.25;
+    case 3: return 0.4;
+    case 4: return 0.55;
+    case 5: return 0.7;
     default: return 0.2;
   }
 }

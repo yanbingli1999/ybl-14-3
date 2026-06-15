@@ -9,6 +9,22 @@ export type CandyType =
 
 export type SpecialCandyType = 'rainbow' | 'bomb' | null;
 
+export type OriginId = 'candy-town' | 'lemon-estate' | 'mint-forest' | 'blueberry-port' | 'grape-castle';
+
+export interface Origin {
+  id: OriginId;
+  name: string;
+  shortName: string;
+  color: string;
+  badgeColor: string;
+}
+
+export interface BoardRegion {
+  originId: OriginId;
+  rows: [number, number];
+  cols: [number, number];
+}
+
 export interface Candy {
   id: string;
   type: CandyType;
@@ -18,6 +34,7 @@ export interface Candy {
   specialType: SpecialCandyType;
   isMatched: boolean;
   isFalling: boolean;
+  origin: OriginId;
 }
 
 export interface Position {
@@ -33,11 +50,17 @@ export interface MatchResult {
   specialPosition: Position | null;
 }
 
+export interface OriginLoad {
+  originId: OriginId;
+  quantity: number;
+}
+
 export interface Carriage {
   id: string;
   candyType: CandyType;
   capacity: number;
   currentLoad: number;
+  originLoads: OriginLoad[];
 }
 
 export interface Train {
@@ -49,6 +72,7 @@ export interface Train {
 export interface OrderItem {
   candyType: CandyType;
   quantity: number;
+  requiredOrigin: OriginId | null;
 }
 
 export interface StationOrder {
@@ -79,28 +103,23 @@ export interface PlayerProfile {
   unlockedStations: string[];
 }
 
-export interface GameState {
-  board: (Candy | null)[][];
-  selectedCandy: Position | null;
-  score: number;
-  moves: number;
-  combo: number;
-  maxCombo: number;
-  train: Train;
-  currentOrder: StationOrder | null;
-  currentStationId: string;
-  isAnimating: boolean;
-  gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover';
-  dispatchResult: DispatchResult | null;
+export interface OriginMismatchDetail {
+  candyType: CandyType;
+  requiredOrigin: OriginId | null;
+  loadedOrigins: OriginLoad[];
+  missing: number;
 }
 
 export interface DispatchResult {
   success: boolean;
-  matchRate: number;
+  typeMatchRate: number;
+  originMatchRate: number;
+  overallMatchRate: number;
   reward: number;
   penalty: number;
   mismatches: OrderItem[];
   correctItems: OrderItem[];
+  originMismatches: OriginMismatchDetail[];
   reputationChange: number;
 }
 

@@ -1,5 +1,10 @@
-import { Candy, Position, MatchResult, CandyType, SpecialCandyType, BOARD_SIZE, BASIC_CANDY_TYPES } from '@/types';
-import { GAME_CONFIG } from '@/data/config';
+import { Candy, Position, MatchResult, CandyType, SpecialCandyType, BOARD_SIZE, BASIC_CANDY_TYPES, OriginId } from '@/types';
+import { GAME_CONFIG, getOriginForCell } from '@/data/config';
+
+export interface ClearedCandyInfo {
+  totalByType: Record<CandyType, number>;
+  byTypeAndOrigin: Record<string, number>;
+}
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
@@ -9,7 +14,7 @@ function getRandomCandyType(): CandyType {
   return BASIC_CANDY_TYPES[Math.floor(Math.random() * BASIC_CANDY_TYPES.length)];
 }
 
-export function createCandy(row: number, col: number, type?: CandyType): Candy {
+export function createCandy(row: number, col: number, type?: CandyType, origin?: OriginId): Candy {
   return {
     id: generateId(),
     type: type || getRandomCandyType(),
@@ -19,10 +24,11 @@ export function createCandy(row: number, col: number, type?: CandyType): Candy {
     specialType: null,
     isMatched: false,
     isFalling: false,
+    origin: origin || getOriginForCell(row, col),
   };
 }
 
-export function createSpecialCandy(row: number, col: number, specialType: SpecialCandyType): Candy {
+export function createSpecialCandy(row: number, col: number, specialType: SpecialCandyType, origin?: OriginId): Candy {
   let type: CandyType = 'strawberry';
   if (specialType === 'rainbow') type = 'rainbow';
   if (specialType === 'bomb') type = 'bomb';
@@ -36,6 +42,7 @@ export function createSpecialCandy(row: number, col: number, specialType: Specia
     specialType,
     isMatched: false,
     isFalling: false,
+    origin: origin || getOriginForCell(row, col),
   };
 }
 
@@ -535,18 +542,24 @@ export function placeSpecialCandies(board: (Candy | null)[][], matches: MatchRes
   return newBoard;
 }
 
-export function countClearedCandies(matches: MatchResult[]): Record<CandyType, number> {
-  const counts: Record<string, number> = {};
+export function countClearedCandies(matches: MatchResult[]): ClearedCandyInfo {
+  const totalByType: Record<string, number> = {};
+  const byTypeAndOrigin: Record<string, number> = {};
 
   for (const match of matches) {
     for (const candy of match.candies) {
       if (!candy.isSpecial) {
-        counts[candy.type] = (counts[candy.type] || 0) + 1;
+        totalByType[candy.type] = (totalByType[candy.type] || 0) + 1;
+        const key = `${candy.type}-${candy.origin}`;
+        byTypeAndOrigin[key] = (byTypeAndOrigin[key] || 0) + 1;
       }
     }
   }
 
-  return counts as Record<CandyType, number>;
+  return {
+    totalByType: totalByType as Record<CandyType, number>,
+    byTypeAndOrigin,
+  };
 }
 
 export function calculateScore(matches: MatchResult[], combo: number): number {

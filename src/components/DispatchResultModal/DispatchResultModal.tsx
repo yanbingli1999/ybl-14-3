@@ -1,14 +1,17 @@
 import useGameStore from '@/store/useGameStore';
-import { CANDY_CONFIG } from '@/data/config';
-import { Coins, Star, CheckCircle, XCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { CANDY_CONFIG, ORIGINS } from '@/data/config';
+import { Coins, Star, CheckCircle, XCircle, TrendingUp, TrendingDown, Factory } from 'lucide-react';
 
 export default function DispatchResultModal() {
   const { gamePhase, dispatchResult, nextOrder, closeResult, currentOrder } = useGameStore();
 
   if (gamePhase !== 'result' || !dispatchResult || !currentOrder) return null;
 
-  const { success, matchRate, reward, penalty, mismatches, correctItems, reputationChange } =
+  const {
+    success, typeMatchRate, originMatchRate, overallMatchRate, reward, penalty, mismatches, correctItems, originMismatches, reputationChange } =
     dispatchResult;
+
+  const hasOriginConstraints = currentOrder.items.some(i => i.requiredOrigin);
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -28,17 +31,38 @@ export default function DispatchResultModal() {
           </p>
         </div>
 
-        <div className="bg-white rounded-t-3xl p-6 -mt-2">
-          <div className="flex justify-center gap-8 mb-6">
+        <div className="bg-white rounded-t-3xl p-6 -mt-2 max-h-[70vh overflow-y-auto">
+          <div className="flex justify-center gap-4 sm:gap-8 mb-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-gray-800">
-                {Math.round(matchRate * 100)}%
+              <div className="text-2xl sm:text-3xl font-bold text-gray-800">
+                {Math.round(overallMatchRate * 100)}%
               </div>
-              <div className="text-xs text-gray-500">匹配度</div>
+              <div className="text-xs text-gray-500">综合匹配</div>
             </div>
+            {hasOriginConstraints && (
+              <>
+                <div className="w-px bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-blue-600">
+                    {Math.round(typeMatchRate * 100)}%
+                  </div>
+                  <div className="text-xs text-gray-500">类型匹配</div>
+                </div>
+                <div className="w-px bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-600">
+                    {Math.round(originMatchRate * 100)}%
+                  </div>
+                  <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                    <Factory className="w-3 h-3" />
+                    产地匹配
+                  </div>
+                </div>
+              </>
+            )}
             <div className="w-px bg-gray-200" />
             <div className="text-center">
-              <div className={`text-3xl font-bold ${reward > 0 ? 'text-yellow-500' : 'text-gray-400'}`}>
+              <div className={`text-2xl sm:text-3xl font-bold ${reward > 0 ? 'text-yellow-500' : 'text-gray-400'}`}>
                 +{reward}
               </div>
               <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
@@ -48,7 +72,7 @@ export default function DispatchResultModal() {
             </div>
             <div className="w-px bg-gray-200" />
             <div className="text-center">
-              <div className={`text-3xl font-bold ${reputationChange >= 0 ? 'text-purple-500' : 'text-red-500'}`}>
+              <div className={`text-2xl sm:text-3xl font-bold ${reputationChange >= 0 ? 'text-purple-500' : 'text-red-500'}`}>
                 {reputationChange >= 0 ? '+' : ''}{reputationChange}
               </div>
               <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
@@ -74,35 +98,102 @@ export default function DispatchResultModal() {
                 正确送达
               </h4>
               <div className="flex flex-wrap gap-2">
-                {correctItems.map((item, i) => (
-                  <span
-                    key={i}
-                    className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-sm"
-                  >
-                    {CANDY_CONFIG[item.candyType].emoji}
-                    {item.quantity}个
-                  </span>
-                ))}
+                {correctItems.map((item, i) => {
+                  const originInfo = item.requiredOrigin ? ORIGINS[item.requiredOrigin] : null;
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-sm"
+                    >
+                      {CANDY_CONFIG[item.candyType].emoji}
+                      {item.quantity}个
+                      {originInfo && (
+                        <span
+                          className="ml-1 inline-flex items-center px-1 rounded text-[10px] text-white"
+                          style={{ backgroundColor: originInfo.badgeColor }}
+                        >
+                          {originInfo.shortName}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {mismatches.length > 0 && (
+          {originMismatches.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <Factory className="w-4 h-4 text-orange-500" />
+                产地不符
+              </h4>
+              <div className="space-y-2">
+                {originMismatches.map((detail, i) => {
+                  const config = CANDY_CONFIG[detail.candyType];
+                  const requiredOriginInfo = detail.requiredOrigin ? ORIGINS[detail.requiredOrigin] : null;
+                  return (
+                    <div key={i} className="p-2 bg-orange-50 rounded-lg text-xs">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">{config.emoji}</span>
+                        <span className="font-medium text-orange-800">{config.name}</span>
+                        {requiredOriginInfo && (
+                          <span
+                            className="px-1.5 py-0.5 rounded text-white"
+                            style={{ backgroundColor: requiredOriginInfo.badgeColor }}
+                          >
+                            需要:{requiredOriginInfo.shortName}
+                          </span>
+                        )}
+                        <span className="ml-auto text-orange-600 font-bold">差{detail.missing}个</span>
+                      </div>
+                      {detail.loadedOrigins.length > 0 && (
+                        <div className="flex flex-wrap gap-1 ml-7 text-[10px]">
+                          <span className="text-gray-500">实际来自:</span>
+                          {detail.loadedOrigins.map(ol => (
+                            <span
+                              key={ol.originId}
+                              className="px-1.5 rounded bg-white text-gray-200 text-gray-700"
+                            >
+                              {ORIGINS[ol.originId].shortName}×{ol.quantity}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {mismatches.length > 0 && originMismatches.length === 0 && (
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
                 <XCircle className="w-4 h-4 text-red-500" />
                 错装或缺货
               </h4>
               <div className="flex flex-wrap gap-2">
-                {mismatches.map((item, i) => (
-                  <span
-                    key={i}
-                    className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded-lg text-sm"
-                  >
-                    {CANDY_CONFIG[item.candyType].emoji}
-                    差{item.quantity}个
-                  </span>
-                ))}
+                {mismatches.map((item, i) => {
+                  const originInfo = item.requiredOrigin ? ORIGINS[item.requiredOrigin] : null;
+                  return (
+                    <span
+                      key={i}
+                      className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded-lg text-sm"
+                    >
+                      {CANDY_CONFIG[item.candyType].emoji}
+                      差{item.quantity}个
+                      {originInfo && (
+                        <span
+                          className="ml-1 inline-flex items-center px-1 rounded text-[10px] text-white"
+                          style={{ backgroundColor: originInfo.badgeColor }}
+                        >
+                          {originInfo.shortName}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}

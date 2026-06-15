@@ -1,7 +1,7 @@
 import useGameStore from '@/store/useGameStore';
-import { CANDY_CONFIG, STATIONS } from '@/data/config';
-import { getCandyLoad } from '@/engine/loadingSystem';
-import { MapPin, Flame, Coins, AlertTriangle } from 'lucide-react';
+import { CANDY_CONFIG, STATIONS, ORIGINS } from '@/data/config';
+import { getCandyLoad, getCandyLoadByOrigin } from '@/engine/loadingSystem';
+import { MapPin, Flame, Coins, AlertTriangle, Factory } from 'lucide-react';
 
 export default function StationOrderPanel() {
   const { currentOrder, train, currentStationId, profile, changeStation } = useGameStore();
@@ -38,30 +38,67 @@ export default function StationOrderPanel() {
           {currentOrder.items.map((item, index) => {
             const config = CANDY_CONFIG[item.candyType];
             const loaded = getCandyLoad(train, item.candyType);
-            const progress = Math.min((loaded / item.quantity) * 100, 100);
-            const isComplete = loaded >= item.quantity;
+
+            let originLoaded = 0;
+            let originProgress = 0;
+            let originComplete = false;
+            if (item.requiredOrigin) {
+              originLoaded = getCandyLoadByOrigin(train, item.candyType, item.requiredOrigin);
+              originProgress = Math.min((originLoaded / item.quantity) * 100, 100);
+              originComplete = originLoaded >= item.quantity;
+            }
+
+            const progress = item.requiredOrigin
+              ? originProgress
+              : Math.min((loaded / item.quantity) * 100, 100);
+            const isComplete = item.requiredOrigin
+              ? originComplete
+              : loaded >= item.quantity;
+
+            const displayLoaded = item.requiredOrigin ? originLoaded : loaded;
+            const originInfo = item.requiredOrigin ? ORIGINS[item.requiredOrigin] : null;
 
             return (
-              <div key={index} className="flex items-center gap-3">
-                <span className="text-xl">{config.emoji}</span>
-                <div className="flex-1">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium text-gray-700">{config.name}</span>
-                    <span className={isComplete ? 'text-green-600 font-bold' : 'text-gray-500'}>
-                      {loaded}/{item.quantity}
-                    </span>
+              <div key={index} className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{config.emoji}</span>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm mb-1">
+                      <div className="font-medium text-gray-700 flex items-center gap-1">
+                        {config.name}
+                        {originInfo && (
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] text-white ml-1"
+                            style={{ backgroundColor: originInfo.badgeColor }}
+                            title={`必须来自${originInfo.name}`}
+                          >
+                            <Factory className="w-2.5 h-2.5" />
+                            {originInfo.shortName}
+                          </span>
+                        )}
+                      </div>
+                      <span className={isComplete ? 'text-green-600 font-bold' : 'text-gray-500'}>
+                        {displayLoaded}/{item.quantity}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${progress}%`,
+                          backgroundColor: isComplete ? '#6BCB77' : config.color,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${progress}%`,
-                        backgroundColor: isComplete ? '#6BCB77' : config.color,
-                      }}
-                    />
-                  </div>
+                  {isComplete && <span className="text-green-500">✓</span>}
                 </div>
-                {isComplete && <span className="text-green-500">✓</span>}
+
+                {originInfo && !originComplete && loaded > 0 && originLoaded < loaded && (
+                  <div className="ml-9 text-[10px] text-orange-600 bg-orange-50 rounded px-2 py-0.5">
+                    ⚠️ 已装车{loaded}个，但仅{originLoaded}个来自{originInfo.name}
+                  </div>
+                )}
               </div>
             );
           })}

@@ -1,5 +1,5 @@
 import { Candy } from '@/types';
-import { CANDY_CONFIG } from '@/data/config';
+import { CANDY_CONFIG, ORIGINS } from '@/data/config';
 import { cn } from '@/lib/utils';
 
 interface CandyCellProps {
@@ -17,12 +17,13 @@ export default function CandyCell({ candy, isSelected, onClick }: CandyCellProps
 
   const config = CANDY_CONFIG[candy.type];
   const isSpecial = candy.isSpecial;
+  const originConfig = ORIGINS[candy.origin];
 
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center text-2xl sm:text-3xl',
+        'w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center text-2xl sm:text-3xl relative',
         'transition-all duration-200 transform',
         'hover:scale-110 active:scale-95',
         'shadow-md hover:shadow-lg',
@@ -41,6 +42,13 @@ export default function CandyCell({ candy, isSelected, onClick }: CandyCellProps
       }}
     >
       <span className="drop-shadow-md">{config.emoji}</span>
+      <span
+        className="absolute -bottom-0.5 -right-0.5 text-[8px] sm:text-[9px] font-bold text-white px-1 rounded-full shadow-sm leading-tight"
+        style={{ backgroundColor: originConfig.badgeColor }}
+        title={originConfig.name}
+      >
+        {originConfig.shortName}
+      </span>
     </button>
   );
 }

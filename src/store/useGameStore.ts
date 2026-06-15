@@ -291,7 +291,7 @@ const useGameStore = create<GameStore>((set, get) => {
       recordDispatchStats(
         Math.max(1, movesUsed),
         Math.max(1, maxCombo),
-        result.mismatches.length,
+        result.mismatches.length + result.originMismatches.length,
         result.penalty,
         currentOrder.isUrgent,
         result.success,
