@@ -1,4 +1,4 @@
-import { StationOrder, OrderItem, Station, CandyType, BASIC_CANDY_TYPES, OriginId } from '@/types';
+import { StationOrder, OrderItem, Station, BASIC_CANDY_TYPES, OriginId } from '@/types';
 import { STATIONS, GAME_CONFIG, ORIGINS } from '@/data/config';
 
 function generateId(): string {

@@ -1,5 +1,5 @@
 import { Train, Carriage, CandyType, OriginId, OriginLoad } from '@/types';
-import { GAME_CONFIG, ORIGINS } from '@/data/config';
+import { ORIGINS } from '@/data/config';
 import { ClearedCandyInfo } from './matchEngine';
 
 export function loadCandiesToTrain(train: Train, candyInfo: ClearedCandyInfo): {

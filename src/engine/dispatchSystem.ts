@@ -1,5 +1,5 @@
-import { Train, StationOrder, DispatchResult, OrderItem, CandyType, OriginId, OriginMismatchDetail, OriginLoad } from '@/types';
-import { GAME_CONFIG, ORIGINS } from '@/data/config';
+import { Train, StationOrder, DispatchResult, OrderItem, OriginMismatchDetail } from '@/types';
+import { GAME_CONFIG } from '@/data/config';
 import { getCandyLoad, getCandyLoadByOrigin } from './loadingSystem';
 
 export function calculateDispatchResult(
@@ -30,14 +30,14 @@ export function calculateDispatchResult(
         typeMatchPoints += item.quantity;
         originMatchPoints += item.quantity;
       } else if (loaded >= item.quantity) {
-        correctItems.push({ ...item });
-        typeMatchPoints += item.quantity;
-
-        if (loadedFromRequiredOrigin > 0) {
-          originMatchPoints += loadedFromRequiredOrigin;
+        const correctQty = loadedFromRequiredOrigin;
+        if (correctQty > 0) {
+          correctItems.push({ candyType: item.candyType, quantity: correctQty, requiredOrigin: item.requiredOrigin });
+          typeMatchPoints += correctQty;
+          originMatchPoints += correctQty;
         }
 
-        const missingFromOrigin = item.quantity - loadedFromRequiredOrigin;
+        const missingFromOrigin = item.quantity - correctQty;
         originMismatches.push({
           candyType: item.candyType,
           requiredOrigin: item.requiredOrigin,
@@ -50,14 +50,14 @@ export function calculateDispatchResult(
           requiredOrigin: item.requiredOrigin,
         });
       } else if (loaded > 0) {
-        correctItems.push({ candyType: item.candyType, quantity: loaded, requiredOrigin: item.requiredOrigin });
-        typeMatchPoints += loaded;
-
-        if (loadedFromRequiredOrigin > 0) {
-          originMatchPoints += loadedFromRequiredOrigin;
+        const correctQty = loadedFromRequiredOrigin;
+        if (correctQty > 0) {
+          correctItems.push({ candyType: item.candyType, quantity: correctQty, requiredOrigin: item.requiredOrigin });
+          typeMatchPoints += correctQty;
+          originMatchPoints += correctQty;
         }
 
-        const missingFromOrigin = Math.max(item.quantity - loadedFromRequiredOrigin, 0);
+        const missingFromOrigin = Math.max(item.quantity - correctQty, 0);
         originMismatches.push({
           candyType: item.candyType,
           requiredOrigin: item.requiredOrigin,

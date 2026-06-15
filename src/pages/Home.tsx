@@ -11,7 +11,7 @@ import { Train, Candy } from 'lucide-react';
 
 export default function Home() {
   const { profile } = useGameStore();
-  const { current, next, progress } = getStationProgress(profile.reputation);
+  const { next, progress } = getStationProgress(profile.reputation);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-pink-50 to-purple-50">

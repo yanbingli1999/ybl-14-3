@@ -17,7 +17,8 @@ export default function CandyCell({ candy, isSelected, onClick }: CandyCellProps
 
   const config = CANDY_CONFIG[candy.type];
   const isSpecial = candy.isSpecial;
-  const originConfig = ORIGINS[candy.origin];
+  const originKey = candy.origin as keyof typeof ORIGINS;
+  const originConfig = ORIGINS[originKey] || ORIGINS['candy-town'];
 
   return (
     <button

@@ -9,10 +9,12 @@ import {
   Candy,
   Train,
   StationOrder,
-  Position,
   DispatchResult,
+  OriginId,
+  Carriage,
+  OrderItem,
 } from '@/types';
-import { STATIONS, INITIAL_TRAIN, GAME_CONFIG } from '@/data/config';
+import { STATIONS, INITIAL_TRAIN, GAME_CONFIG, ORIGINS, getOriginForCell } from '@/data/config';
 import { createInitialBoard } from '@/engine/matchEngine';
 import { generateOrder } from '@/engine/contractSystem';
 
@@ -37,6 +39,69 @@ export interface PersistedGameState {
   timestamp: number;
 }
 
+function createEmptyOriginLoads() {
+  return (Object.keys(ORIGINS) as OriginId[]).map(originId => ({
+    originId,
+    quantity: 0,
+  }));
+}
+
+function migrateCandy(candy: Candy | null): Candy | null {
+  if (!candy) return null;
+  return {
+    ...candy,
+    origin: candy.origin || getOriginForCell(candy.row, candy.col),
+  };
+}
+
+function migrateBoard(board: (Candy | null)[][]): (Candy | null)[][] {
+  if (!board || !Array.isArray(board)) return createInitialBoard();
+  return board.map(row => row.map(candy => migrateCandy(candy)));
+}
+
+function migrateCarriages(carriages: Carriage[]): Carriage[] {
+  if (!carriages || !Array.isArray(carriages)) return [];
+  return carriages.map(c => ({
+    ...c,
+    originLoads: c.originLoads || createEmptyOriginLoads(),
+  }));
+}
+
+function migrateTrain(train: Train): Train {
+  if (!train || !train.carriages) {
+    return JSON.parse(JSON.stringify(INITIAL_TRAIN));
+  }
+  return {
+    ...train,
+    carriages: migrateCarriages(train.carriages),
+  };
+}
+
+function migrateOrderItems(items: OrderItem[]): OrderItem[] {
+  if (!items || !Array.isArray(items)) return [];
+  return items.map(item => ({
+    ...item,
+    requiredOrigin: item.requiredOrigin ?? null,
+  }));
+}
+
+function migrateOrder(order: StationOrder | null): StationOrder | null {
+  if (!order) return null;
+  return {
+    ...order,
+    items: migrateOrderItems(order.items),
+  };
+}
+
+function migrateGameState(state: PersistedGameState): PersistedGameState {
+  return {
+    ...state,
+    board: migrateBoard(state.board),
+    train: migrateTrain(state.train),
+    currentOrder: migrateOrder(state.currentOrder),
+  };
+}
+
 export function saveGameState(state: Omit<PersistedGameState, 'timestamp'>): void {
   try {
     const data: PersistedGameState = { ...state, timestamp: Date.now() };
@@ -53,7 +118,7 @@ export function loadGameState(profile: PlayerProfile): PersistedGameState | null
       const parsed = JSON.parse(data) as PersistedGameState;
       const now = Date.now();
       if (now - parsed.timestamp < 24 * 60 * 60 * 1000) {
-        return parsed;
+        return migrateGameState(parsed);
       }
     }
   } catch (e) {

@@ -1,6 +1,6 @@
 import { Carriage } from '@/types';
 import { CANDY_CONFIG, ORIGINS } from '@/data/config';
-import { getLoadPercentage, getCarriageOriginBreakdown } from '@/engine/loadingSystem';
+import { getLoadPercentage } from '@/engine/loadingSystem';
 import { useState } from 'react';
 
 interface CarriageCardProps {
@@ -11,7 +11,8 @@ export default function CarriageCard({ carriage }: CarriageCardProps) {
   const config = CANDY_CONFIG[carriage.candyType];
   const loadPercent = getLoadPercentage(carriage);
   const isFull = loadPercent >= 100;
-  const originBreakdown = getCarriageOriginBreakdown(carriage);
+  const safeOriginLoads = carriage.originLoads || [];
+  const originBreakdown = safeOriginLoads.filter(ol => ol && ol.quantity > 0);
   const [showDetail, setShowDetail] = useState(false);
 
   return (
@@ -55,14 +56,18 @@ export default function CarriageCard({ carriage }: CarriageCardProps) {
 
       {originBreakdown.length > 0 && (
         <div className="w-full mt-1.5 flex flex-wrap gap-0.5 justify-center">
-          {originBreakdown.slice(0, 3).map(ol => (
-            <div
-              key={ol.originId}
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: ORIGINS[ol.originId].color }}
-              title={`${ORIGINS[ol.originId].name}: ${ol.quantity}个`}
-            />
-          ))}
+          {originBreakdown.slice(0, 3).map(ol => {
+            const originKey = ol.originId as keyof typeof ORIGINS;
+            const originConfig = ORIGINS[originKey] || ORIGINS['candy-town'];
+            return (
+              <div
+                key={ol.originId}
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: originConfig.color }}
+                title={`${originConfig.name}: ${ol.quantity}个`}
+              />
+            );
+          })}
           {originBreakdown.length > 3 && (
             <span className="text-[8px] text-gray-500">+{originBreakdown.length - 3}</span>
           )}
@@ -72,16 +77,20 @@ export default function CarriageCard({ carriage }: CarriageCardProps) {
       {showDetail && originBreakdown.length > 0 && (
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full z-20 mt-1 bg-white rounded-lg shadow-xl p-2 border border-gray-200 whitespace-nowrap">
           <div className="text-[10px] font-bold text-gray-600 mb-1 border-b pb-1">产地明细</div>
-          {originBreakdown.map(ol => (
-            <div key={ol.originId} className="flex items-center gap-1 text-[10px] py-0.5">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: ORIGINS[ol.originId].color }}
-              />
-              <span className="text-gray-700">{ORIGINS[ol.originId].name}</span>
-              <span className="font-bold text-gray-900 ml-auto">{ol.quantity}</span>
-            </div>
-          ))}
+          {originBreakdown.map(ol => {
+            const originKey = ol.originId as keyof typeof ORIGINS;
+            const originConfig = ORIGINS[originKey] || ORIGINS['candy-town'];
+            return (
+              <div key={ol.originId} className="flex items-center gap-1 text-[10px] py-0.5">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: originConfig.color }}
+                />
+                <span className="text-gray-700">{originConfig.name}</span>
+                <span className="font-bold text-gray-900 ml-auto">{ol.quantity}</span>
+              </div>
+            );
+          })}
         </div>
       )}
 
